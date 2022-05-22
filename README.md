@@ -2,7 +2,7 @@
 Persistence by writing/reading shellcode from Event Log.  
   
 ## Usage
-The SharpEventPersist tool takes 4 parameters:  
+The SharpEventPersist tool takes 4 case-sensitive parameters:  
 * --file "C:\path\to\shellcode.bin"
 * --instanceid 1337
 * --source Persistence
