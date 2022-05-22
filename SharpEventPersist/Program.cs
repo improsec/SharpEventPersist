@@ -10,7 +10,6 @@ namespace SharpEventPersist
     class Program
     {
         public static int EventWrites = 0;
-        //public static int i = 0;
 
         public static void PrintHelp()
         {
